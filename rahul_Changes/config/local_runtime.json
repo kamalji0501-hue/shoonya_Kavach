@@ -1,0 +1,6 @@
+{
+  "_comment": "Rahul sandbox \u2014 isolated runtime (sibling of batman-algo)",
+  "logs_root": "/home/ubuntu/Trading_Runtime_Rahul/Logs",
+  "data_reports_root": "/home/ubuntu/Trading_Runtime_Rahul/Data",
+  "secrets_root": "/home/ubuntu/Trading_Runtime_Rahul/Credentials"
+}

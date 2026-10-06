@@ -1,0 +1,14 @@
+generated_at: 2026-07-17T19:14:18Z
+stage: B_PROD_CUTOVER
+vps_host: unset
+static_ip: unset
+
+checklist:
+  [ ] 1. Stage A UAT always-on stable for several market sessions
+  [ ] 2. Dhan console: whitelist static IP <set VPS_STATIC_IP>
+  [ ] 3. Fresh Dhan JWT on VPS (DRISHTI / access_token.json)
+  [ ] 4. Confirm batman-phase1.target active on VPS
+  [ ] 5. Run: Mode Set-Prod on VPS (or --apply-prod below)
+  [ ] 6. Supervised Register + one ATO cycle observation
+  [ ] 7. Go/no-go: full-session ws_ltp log, no false off-hours stale
+

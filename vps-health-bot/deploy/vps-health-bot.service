@@ -1,0 +1,24 @@
+[Unit]
+Description=VPS Health Telegram Bot (KamaljiAlgo HFT monitor)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=ubuntu
+Group=ubuntu
+WorkingDirectory=/home/ubuntu/vps-health-bot
+Environment=PYTHONUNBUFFERED=1
+Environment=TZ=Asia/Kolkata
+Environment=VPS_HEALTH_ROOT=/home/ubuntu/vps-health-bot
+Environment=VPS_HEALTH_RUNTIME=/home/ubuntu/VPSHealth_Runtime
+EnvironmentFile=-/home/ubuntu/VPSHealth_Runtime/Credentials/telegram/token.env
+ExecStart=/home/ubuntu/vps-health-bot/.venv/bin/python -u run_vps_health_bot.py
+Restart=on-failure
+RestartSec=5
+MemoryMax=250M
+StandardOutput=append:/home/ubuntu/VPSHealth_Runtime/Data/vps_health/bot_stdout.log
+StandardError=append:/home/ubuntu/VPSHealth_Runtime/Data/vps_health/bot_stderr.log
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,17 @@
+{
+  "feed_mode": "websocket",
+  "poll_interval_seconds": 2,
+  "stale_price_alert_seconds": 2,
+  "user_ping_warning_age_seconds": 15,
+  "user_ping_critical_age_seconds": 60,
+  "fetch_failure_jagran_threshold": 5,
+  "log_enabled": true,
+  "rest_max_attempts": 3,
+  "rest_retry_base_seconds": 1.0,
+  "rest_retry_backoff_multiplier": 2.0,
+  "rate_limit_cooldown_seconds": 30.0,
+  "websocket_stale_critical_seconds": 5,
+  "rest_stale_critical_seconds": 10,
+  "websocket_startup_grace_seconds": 30,
+  "configured_at": "2026-08-06T14:13:20.901409+05:30"
+}

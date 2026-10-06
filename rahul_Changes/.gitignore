@@ -1,0 +1,41 @@
+# Secrets / env
+.env
+.env.*
+!.env.example
+**/.env
+**/Credentials/
+**/credentials/
+*.pem
+kite_session*.json
+*_session.json
+
+# Venvs / caches
+.venv/
+venv/
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Logs / local outputs
+logs/
+*.log
+*.pid
+*.lock
+tmp/
+.cache/
+
+# Backups / junk
+*.bak
+*.bak_*
+*.pre_consolidate.bak
+_bak_*/
+%ln
+.deployed_*
+.k4k_*
+
+# OS
+.DS_Store
+Thumbs.db

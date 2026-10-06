@@ -1,0 +1,11 @@
+status: BLOCKED_NO_AWS_CLI
+region: ap-south-1
+instance_name: batman-algo-uat
+action: Install AWS CLI v2, run 'aws configure', then re-run this script.
+manual_console: https://lightsail.aws.amazon.com/ls/webapp/ap-south-1/instances
+manual_steps: |
+  1. Create instance: Ubuntu 24.04, 4 GB / 2 vCPU (medium), Mumbai
+  2. Create + attach Static IP
+  3. Download default key → ~/.ssh/LightsailDefaultKey-ap-south-1.pem ; chmod 400
+  4. Copy vps/deploy.env.example → vps/deploy.env ; set VPS_HOST + VPS_SSH_KEY + VPS_STATIC_IP
+  5. bash vps/deploy_to_vps.sh

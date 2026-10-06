@@ -1,0 +1,75 @@
+{
+  "source": "cursor_chat",
+  "source_image": "sensibull_chat_latest.png",
+  "underlying": "NIFTY",
+  "spot_at_capture": 24325.0,
+  "expiry_label": "04 Aug 2026",
+  "expiry_date": "2026-08-04",
+  "captured_at": "2026-07-31T05:34:39.906522+00:00",
+  "legs": [
+    {
+      "side": "SELL",
+      "type": "PE",
+      "strike": 24300,
+      "lots": 14,
+      "avg_price": 72.95,
+      "role_hint": "pe_sell"
+    },
+    {
+      "side": "BUY",
+      "type": "PE",
+      "strike": 24350,
+      "lots": 7,
+      "avg_price": 93.35,
+      "role_hint": "pe_buy"
+    },
+    {
+      "side": "BUY",
+      "type": "PE",
+      "strike": 24100,
+      "lots": 2,
+      "avg_price": 25.25,
+      "role_hint": "pe_buy"
+    },
+    {
+      "side": "BUY",
+      "type": "PE",
+      "strike": 23500,
+      "lots": 7,
+      "avg_price": 3.5,
+      "role_hint": "pe_buy"
+    },
+    {
+      "side": "BUY",
+      "type": "CE",
+      "strike": 24350,
+      "lots": 7,
+      "avg_price": 94.85,
+      "role_hint": "ce_buy"
+    },
+    {
+      "side": "BUY",
+      "type": "CE",
+      "strike": 24600,
+      "lots": 2,
+      "avg_price": 14.4,
+      "role_hint": "ce_buy"
+    },
+    {
+      "side": "BUY",
+      "type": "CE",
+      "strike": 25000,
+      "lots": 7,
+      "avg_price": 1.65,
+      "role_hint": "ce_buy"
+    },
+    {
+      "side": "SELL",
+      "type": "CE",
+      "strike": 24400,
+      "lots": 14,
+      "avg_price": 70.1,
+      "role_hint": "ce_sell"
+    }
+  ]
+}

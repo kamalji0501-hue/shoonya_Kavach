@@ -1,0 +1,17 @@
+{
+  "where": "local",
+  "mode": "uat",
+  "bots": {
+    "drishti": "running",
+    "kavach2": "running",
+    "jagran": "running",
+    "saransh": "running"
+  },
+  "ok": true,
+  "notes": [
+    "No ws_ltp for 2026-07-18; using latest ws_ltp_20260717.log (82617 lines)"
+  ],
+  "tick_log": "/home/kamalji0501e/Batman Algo Files/15 July 26 DEV Batman Algo/DEV Batman Algo/logs_runtime/uat/runtime/2026-07/2026-07-17/drishti/logs/nifty_websocket_ltp/ws_ltp_20260717.log",
+  "tick_lines": 82617,
+  "market_hours_ist": false
+}

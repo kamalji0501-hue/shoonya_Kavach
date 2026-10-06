@@ -1,0 +1,13 @@
+---
+description: Kavach 2.0 live orders use Zerodha Kite REST
+alwaysApply: true
+---
+
+# Kavach broker = Zerodha (Kite Connect v3 REST)
+
+User commanded the switch (2026-08-26). Kavach 2.0 live orders go through
+`core/zerodha_broker.py` (Kite REST). Paper still uses OrderManager/FakeBroker.
+UAT still uses ShadowBroker.
+
+Do **not** start a second KiteTicker from Kavach. Datafeedbot owns the WS.
+Do **not** add a Dhan order client back unless the user explicitly asks.

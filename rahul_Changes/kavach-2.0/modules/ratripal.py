@@ -1,0 +1,951 @@
+from __future__ import annotations
+
+import csv
+import json
+import logging
+import re
+import threading
+import time as time_module
+from dataclasses import dataclass
+from datetime import date, time
+from pathlib import Path
+from typing import Any, cast
+
+from core import utils
+from core.event_bus import Event
+from core.module_base import ModuleBase
+
+logger = logging.getLogger(__name__)
+
+
+def _handoff_path() -> Path:
+    try:
+        from core.batman_mode import data_root
+
+        return data_root() / "analytics" / "hedge_box" / "aditya_handoff.csv"
+    except Exception:
+        return Path("data/analytics/hedge_box/aditya_handoff.csv")
+
+
+_HANDOFF_PATH = _handoff_path()
+_REQUEST_TIMEOUT_SECONDS = 120
+_BUY_ACTIONS = {
+    "standard_break_even",
+    "green_inside",
+    "orange_inside",
+    "blue_inside",
+    "yellow_inside",
+    "breach_protect",
+}
+
+
+@dataclass(frozen=True)
+class SidePlan:
+    side: str
+    state: str
+    action: str
+    strike: int | None
+    symbol: str | None
+    quantity: int
+    break_even: int | None
+    option_ltp: float | None
+
+
+class Ratripal(ModuleBase):
+    name = "ratripal"
+
+    def _run(self) -> None:
+        self._overnight_exec_lock = threading.Lock()
+        cfg = self.config.section("hedge_box")
+        if not cfg.get("enabled", False):
+            if self._sleep(60):
+                return
+            return
+
+        check_time = time.fromisoformat(str(cfg.get("check_time_ist", "15:15")))
+
+        while not self._stop_event.is_set():
+            try:
+                self._tick(check_time)
+            except Exception as exc:
+                self.log.error("RATRIPAL tick failed: %s", exc)
+            if self._sleep(15):
+                return
+
+    def _tick(self, check_time: time) -> None:
+        if not self.state.get("deployment.confirmed", False):
+            return
+        if self.state.get("deployment.batman_complete", False):
+            return
+        if self.state.get("algo.paused", False):
+            return
+        if not bool(self.config.get("hedge_box.enabled", True)):
+            return
+        if not utils.is_trading_day():
+            return
+
+        now = utils.now_ist()
+        today = now.date()
+        pending_id = self.state.get("ratripal.pending.request_id")
+        if pending_id:
+            if self.state.get("ratripal.pending.response") == "deny":
+                self._clear_pending_request(str(pending_id))
+                self.state.set("ratripal.last_run_date", today.isoformat())
+                self.state.set("ratripal.last_decision", "denied")
+                self._update_overnight_summary(
+                    status="denied",
+                    denied=True,
+                    date=today.isoformat(),
+                )
+                return
+            if now.time() < self._resolve_buy_time():
+                return
+            # Already finished overnight for today — never repunch / redraw.
+            decision = str(self.state.get("ratripal.last_decision") or "")
+            if (
+                self.state.get("ratripal.last_run_date") == today.isoformat()
+                and decision in {"bought", "buy_failed", "denied", "partial"}
+            ):
+                self.log.warning(
+                    "Overnight pending leftover after decision=%s — clearing, no repunch",
+                    decision,
+                )
+                self._clear_pending_request(str(pending_id))
+                return
+            lock = getattr(self, "_overnight_exec_lock", None)
+            if lock is None:
+                self._overnight_exec_lock = threading.Lock()
+                lock = self._overnight_exec_lock
+            if not lock.acquire(blocking=False):
+                return  # another overnight execution already in progress
+            try:
+                self._execute_pending(str(pending_id), today)
+            finally:
+                lock.release()
+            return
+
+        if self.state.get("ratripal.last_run_date") == today.isoformat():
+            return
+        if now.time() < check_time:
+            return
+
+        deployment = self._load_deployment()
+        if deployment is None:
+            return
+
+        dte = self._calculate_dte(deployment, today)
+        if dte <= 0:
+            self.state.set("ratripal.last_run_date", today.isoformat())
+            return
+
+        spot = float(self.broker.get_nifty_ltp())
+        plans = self._build_plans(deployment, spot, dte)
+        eligible = [plan for plan in plans if self._is_buy_candidate(plan)]
+        if not eligible:
+            self.state.set("ratripal.last_run_date", today.isoformat())
+            return
+
+        request_id = f"{today.isoformat()}::{int(now.timestamp())}"
+        buy_time = self._resolve_buy_time()
+        self._request_confirmation(request_id, eligible, dte, spot, buy_time)
+
+    def _load_deployment(self) -> dict[str, Any] | None:
+        deployment_path = self.state.get("deployment.file")
+        if not deployment_path:
+            return None
+        path = Path(str(deployment_path))
+        if not path.exists():
+            return None
+        with open(path, encoding="utf-8") as fh:
+            return cast(dict[str, Any], json.load(fh))
+
+    def _calculate_dte(self, deployment: dict[str, Any], today: date) -> int:
+        calendar = deployment.get("calendar", {}) or {}
+        effective = calendar.get("effective_working_days") or []
+        if effective:
+            days = sorted(date.fromisoformat(d) for d in effective)
+            future_days = [d for d in days if today < d]
+            return len(future_days)
+
+        scope = deployment.get("registration_scope") or {}
+        expiry_raw = (
+            calendar.get("expiry_date")
+            or scope.get("expiry")
+            or deployment.get("expiry")
+            or deployment.get("expiry_date")
+        )
+        if expiry_raw:
+            expiry = date.fromisoformat(str(expiry_raw)[:10])
+            dte = 0
+            cursor = today
+            while cursor < expiry:
+                cursor = utils.next_trading_day(cursor)
+                dte += 1
+            return dte
+
+        # Last resort: next weekly Tuesday expiry (can be 0 on expiry morning).
+        expiry = utils.current_week_expiry(utils.day_name_to_weekday("Tuesday"), today)
+        dte = 0
+        cursor = today
+        while cursor < expiry:
+            cursor = utils.next_trading_day(cursor)
+            dte += 1
+        return dte
+
+    def _build_plans(self, deployment: dict[str, Any], spot: float, dte: int) -> list[SidePlan]:
+        positions = deployment.get("positions", {})
+        ce_short = int(positions.get("ce_sell", {}).get("strike", 0) or 0)
+        pe_short = int(positions.get("pe_sell", {}).get("strike", 0) or 0)
+        box_width = int(self.config.get("hedge_box.box_width_points", 75))
+        strike_step = int(self.config.get("hedge_box.strike_step_points", 50))
+
+        ce_state = self._classify_side_state("CE", spot, ce_short, box_width, dte)
+        pe_state = self._classify_side_state("PE", spot, pe_short, box_width, dte)
+
+        return [
+            self._plan_for_side(
+                side="CE",
+                side_state=ce_state,
+                break_even=self._fixed_break_even("CE", ce_short),
+                short_strike=ce_short,
+                sell_symbol=str(positions.get("ce_sell", {}).get("symbol", "")),
+                buy_qty=abs(int(positions.get("ce_buy", {}).get("qty", 0) or 0)),
+                sell_qty=abs(int(positions.get("ce_sell", {}).get("qty", 0) or 0)),
+                ato_active=bool(self.state.get("ato.ce_triggered", False)),
+                strike_step=strike_step,
+            ),
+            self._plan_for_side(
+                side="PE",
+                side_state=pe_state,
+                break_even=self._fixed_break_even("PE", pe_short),
+                short_strike=pe_short,
+                sell_symbol=str(positions.get("pe_sell", {}).get("symbol", "")),
+                buy_qty=abs(int(positions.get("pe_buy", {}).get("qty", 0) or 0)),
+                sell_qty=abs(int(positions.get("pe_sell", {}).get("qty", 0) or 0)),
+                ato_active=bool(self.state.get("ato.pe_triggered", False)),
+                strike_step=strike_step,
+            ),
+        ]
+
+    def _fixed_break_even(self, side: str, short_strike: int) -> int | None:
+        """Standard BE = sell strike ± offset (CE outside +, PE outside −)."""
+        if not short_strike:
+            return None
+        offset = int(self.config.get("hedge_box.standard_break_even_offset_points", 200))
+        raw = short_strike + offset if str(side).upper() == "CE" else short_strike - offset
+        return self._round_to_strike(float(raw), int(self.config.get("hedge_box.strike_step_points", 50)))
+
+    def _classify_side_state(
+        self,
+        side: str,
+        spot: float,
+        short_strike: int,
+        box_width: int,
+        dte: int,
+    ) -> str:
+        active_colors = self._color_order_for_dte(dte)
+        if side == "CE":
+            if spot >= short_strike:
+                return "Breach"
+            for i, color in enumerate(active_colors):
+                upper = short_strike - i * box_width
+                lower = short_strike - (i + 1) * box_width
+                if lower <= spot < upper:
+                    return color
+            return "White"
+
+        if spot <= short_strike:
+            return "Breach"
+        for i, color in enumerate(active_colors):
+            lower = short_strike + i * box_width
+            upper = short_strike + (i + 1) * box_width
+            if lower < spot <= upper:
+                return color
+        return "White"
+
+    def _plan_for_side(
+        self,
+        *,
+        side: str,
+        side_state: str,
+        break_even: int | None,
+        short_strike: int,
+        sell_symbol: str,
+        buy_qty: int,
+        sell_qty: int,
+        ato_active: bool,
+        strike_step: int,
+    ) -> SidePlan:
+        quantity = buy_qty or max(0, sell_qty // 2)
+        if break_even is None or not short_strike:
+            return SidePlan(
+                side, side_state, "skip_missing_sell_strike", None, None, quantity, None, None
+            )
+
+        if side_state == "Breach" and ato_active:
+            return SidePlan(
+                side, side_state, "keep_engaged_ato", None, None, quantity, int(break_even), None
+            )
+
+        if side_state == "Breach":
+            strike = short_strike + strike_step if side == "CE" else short_strike - strike_step
+            symbol = self._build_option_symbol(sell_symbol, strike, side)
+            return SidePlan(
+                side,
+                side_state,
+                "breach_protect",
+                strike,
+                symbol,
+                quantity,
+                int(break_even),
+                self._get_option_ltp(symbol),
+            )
+
+        steps = self._inside_steps(side_state)
+        if steps is None:
+            strike = self._round_to_strike(float(break_even), strike_step)
+            symbol = self._build_option_symbol(sell_symbol, strike, side)
+            return SidePlan(
+                side,
+                side_state,
+                "standard_break_even",
+                strike,
+                symbol,
+                quantity,
+                int(break_even),
+                self._get_option_ltp(symbol),
+            )
+
+        if side == "CE":
+            raw = int(break_even) - steps * strike_step
+            strike = max(self._round_to_strike(raw, strike_step), short_strike + strike_step)
+        else:
+            raw = int(break_even) + steps * strike_step
+            strike = min(self._round_to_strike(raw, strike_step), short_strike - strike_step)
+
+        symbol = self._build_option_symbol(sell_symbol, strike, side)
+        return SidePlan(
+            side,
+            side_state,
+            f"{side_state.lower()}_inside",
+            strike,
+            symbol,
+            quantity,
+            int(break_even),
+            self._get_option_ltp(symbol),
+        )
+
+    def _resolve_buy_time(self) -> time:
+        """Operator-selected buy time (state) or config default 15:20."""
+        raw = self.state.get("ratripal.buy_time_ist")
+        if not raw:
+            raw = self.config.get("hedge_box.buy_time_ist", "15:20")
+        try:
+            return time.fromisoformat(str(raw))
+        except ValueError:
+            return time(15, 20)
+
+    def _wait_until_buy_time(self, buy_time: time) -> bool:
+        """Block until buy_time IST (or stop). Returns False if stopped early."""
+        while not self._stop_event.is_set():
+            if utils.now_ist().time() >= buy_time:
+                return True
+            if self._sleep(2):
+                return False
+        return False
+
+    def _request_confirmation(
+        self,
+        request_id: str,
+        eligible: list[SidePlan],
+        dte: int,
+        spot: float,
+        buy_time: time | None = None,
+    ) -> str | None:
+        buy_hhmm = (buy_time or self._resolve_buy_time()).strftime("%H:%M")
+        sides = [
+            {
+                "side": plan.side,
+                "zone": plan.state,
+                "action": plan.action,
+                "strike": plan.strike,
+                "symbol": plan.symbol,
+                "qty": plan.quantity,
+                "break_even": plan.break_even,
+                "option_ltp": plan.option_ltp,
+            }
+            for plan in eligible
+        ]
+        self.state.set("ratripal.pending.request_id", request_id, save=False)
+        self.state.set("ratripal.pending.response", None, save=False)
+        self.state.set("ratripal.pending.sent_at", utils.now_ist().isoformat(), save=False)
+        self.state.set("ratripal.pending.buy_time_ist", buy_hhmm, save=False)
+        self.state.set("ratripal.pending.sides", sides, save=False)
+        try:
+            from core.desk_alerts import emit_desk_alert
+
+            bits = ", ".join(f"{s['side']} {s['strike']} x{s['qty']}" for s in sides)
+            emit_desk_alert(
+                severity="orange",
+                category="Hedge Box",
+                alert=f"Hedge Box plan {bits} — auto-buy {buy_hhmm} unless Deny on the desk.",
+                log=f"Hedge Box pending {request_id} buy_time={buy_hhmm}",
+            )
+        except Exception:
+            pass
+        self.events.publish(
+            Event.HEDGE_BOX_CONFIRMATION_REQUEST,
+            {
+                "request_id": request_id,
+                "spot": spot,
+                "dte": dte,
+                "buy_time_ist": buy_hhmm,
+                "timeout_seconds": _REQUEST_TIMEOUT_SECONDS,
+                "sides": sides,
+            },
+        )
+
+        try:
+            from core.overnight_handoff import merge_overnight_summary
+
+            merge_overnight_summary(
+                self.state,
+                date=utils.now_ist().date().isoformat(),
+                status="pending",
+                denied=False,
+                buy_time_ist=buy_hhmm,
+                sides=sides,
+                request_id=request_id,
+                dte=dte,
+                spot=spot,
+            )
+        except Exception:
+            pass
+        return None
+
+    def _execute_plan(
+        self,
+        plan: SidePlan,
+        deployment: dict[str, Any],
+        dte: int,
+        spot: float,
+        request_id: str,
+    ) -> bool:
+        """Punch this side ONCE, then confirm fill via position book (same as ATO).
+
+        Never places a second order for this side/request. Confirmation uses
+        net_qty_for_symbol + lots_fulfilled — not Shoonya hist tail PENDING.
+        """
+        if not plan.symbol or not plan.strike or plan.quantity <= 0:
+            return True
+
+        side_u = str(plan.side or "").upper()
+        punched_key = f"ratripal.punched.{request_id}.{side_u}"
+        if self.state.get(punched_key):
+            self.log.info(
+                "Overnight %s already punched for %s — skip (no second order)",
+                side_u,
+                request_id,
+            )
+            return True
+
+        tag = "ce" if side_u == "CE" else "pe"
+        today = utils.now_ist().date().isoformat()
+        if (
+            str(self.state.get(f"overnight.{tag}_symbol") or "") == str(plan.symbol)
+            and str(self.state.get("overnight.buy_date") or "") == today
+            and int(self.state.get(f"overnight.{tag}_qty") or 0) >= int(plan.quantity)
+            and self.state.get(punched_key)
+        ):
+            return True
+
+        lot_size = int(self.config.get("strategy.lot_size", 65) or 65)
+        try:
+            from core.ato_book_validation import net_qty_for_symbol
+
+            book_before = int(net_qty_for_symbol(self.broker, str(plan.symbol)) or 0)
+        except Exception:
+            book_before = 0
+
+        self.log.info(
+            "Overnight punch ONCE side=%s symbol=%s qty=%s book_before=%s",
+            plan.side,
+            plan.symbol,
+            plan.quantity,
+            book_before,
+        )
+        try:
+            if hasattr(self.broker, "place_aggressive_limit"):
+                order_id = self.broker.place_aggressive_limit(
+                    symbol=plan.symbol,
+                    qty=int(plan.quantity),
+                    side="BUY",
+                    chase_timeout_sec=0.0,
+                    trade_type=self.config.get("strategy.product_type", "MARGIN"),
+                )
+            else:
+                order_id = self.broker.place_market_order(
+                    symbol=plan.symbol,
+                    qty=int(plan.quantity),
+                    side="BUY",
+                    trade_type=self.config.get("strategy.product_type", "MARGIN"),
+                )
+        except Exception as exc:
+            self._publish_execution_failure(
+                scenario="hedge_box_execution_failure",
+                title=f"Kavach failed to place {plan.side} overnight hedge buy",
+                error_message=str(exc),
+                next_action="No overnight repunch. Check broker; place manually if needed.",
+            )
+            return False
+
+        # Mark punched immediately — never fire this side again for this request.
+        self.state.set(punched_key, True, save=False)
+        self.state.set(
+            f"ratripal.order_id.{request_id}.{side_u}",
+            str(order_id),
+            save=False,
+        )
+
+        # Same confirm path as ATO: poll position book until lots land.
+        ok_fill, filled = self._wait_for_broker_fill(
+            order_id=str(order_id),
+            symbol=str(plan.symbol),
+            book_before=book_before,
+            expected_qty=int(plan.quantity),
+            lot_size=lot_size,
+        )
+        status = ""
+        try:
+            status = str(self.broker.get_order_status(str(order_id)) or "").upper()
+        except Exception:
+            status = ""
+
+        if not ok_fill:
+            self.log.warning(
+                "Overnight %s oid=%s book not confirmed yet status=%s filled=%s expected=%s (no retry)",
+                plan.side,
+                order_id,
+                status or "unknown",
+                filled,
+                plan.quantity,
+            )
+        else:
+            self.log.info(
+                "Overnight %s confirmed via position book oid=%s filled=%s status=%s",
+                plan.side,
+                order_id,
+                filled,
+                status or "unknown",
+            )
+
+        self._record_overnight_fill(plan, int(filled if filled > 0 else plan.quantity))
+        self._write_handoff_row(plan, deployment, dte, spot, str(order_id), request_id)
+        self.events.publish(
+            Event.HEDGE_BOX_EXECUTED,
+            {
+                "side": plan.side,
+                "zone": plan.state,
+                "action": plan.action,
+                "strike": plan.strike,
+                "symbol": plan.symbol,
+                "qty": plan.quantity,
+                "filled_qty": int(filled),
+                "order_id": str(order_id),
+                "dte": dte,
+                "break_even": plan.break_even,
+                "book_confirmed": bool(ok_fill),
+                "status_at_confirm": status or "unknown",
+            },
+        )
+        return True
+
+    def _wait_for_broker_fill(
+        self,
+        *,
+        order_id: str,
+        symbol: str,
+        book_before: int,
+        expected_qty: int,
+        lot_size: int = 65,
+        timeout_sec: float | None = None,
+    ) -> tuple[bool, int]:
+        """Confirm overnight fill the ATO way: position book qty, not hist PENDING.
+
+        Mirrors ato_protection._wait_protect_fill: poll net_qty_for_symbol and
+        lots_fulfilled. Optional orderbook reject short-circuit. Never repunches.
+        """
+        import time as _time
+        from core.ato_book_validation import lots_fulfilled, net_qty_for_symbol
+
+        if expected_qty <= 0:
+            return True, 0
+
+        lot_size = int(lot_size or 65)
+        # Prefer ATO order-fill knobs; overnight default a bit longer for evening lag.
+        try:
+            op = self.config.section("order_placement") or {}
+        except Exception:
+            op = {}
+        if timeout_sec is None:
+            wait_s = float(op.get("order_fill_wait_seconds", 12.0) or 12.0)
+            # Overnight hedges need a bit more headroom than ATO's ~1.5s default.
+            wait_s = max(wait_s, 12.0)
+        else:
+            wait_s = float(timeout_sec)
+        polls = int(op.get("order_fill_polls", 12) or 12)
+        polls = max(4, polls)
+        delay = max(0.05, float(wait_s) / polls)
+        target_net = int(book_before) + int(expected_qty)
+
+        last = net_qty_for_symbol(self.broker, symbol)
+        for _ in range(polls):
+            if last is not None and lots_fulfilled(int(last), target_net, lot_size):
+                gained = max(0, int(last) - int(book_before))
+                return True, gained
+            # Reject short-circuit via OrderBook-aware get_order_status.
+            try:
+                st = str(self.broker.get_order_status(str(order_id)) or "").upper()
+            except Exception:
+                st = ""
+            if st in {"REJECTED", "CANCELLED", "CANCELED"}:
+                gained = max(0, int(last or 0) - int(book_before))
+                return False, gained
+            _time.sleep(delay)
+            last = net_qty_for_symbol(self.broker, symbol)
+
+        if last is not None and lots_fulfilled(int(last), target_net, lot_size):
+            return True, max(0, int(last) - int(book_before))
+        gained = max(0, int(last or 0) - int(book_before))
+        # Partial book progress still counts as observed fill qty.
+        if gained > 0 and lots_fulfilled(gained, expected_qty, lot_size):
+            return True, gained
+        return False, gained
+
+    def _verify_order(self, order_id: str, *, symbol: str | None = None, expected_qty: int = 0) -> bool:
+        """Prefer position-book confirm (ATO path); fall back to order status."""
+        try:
+            if symbol and expected_qty > 0:
+                from core.ato_book_validation import lots_fulfilled, net_qty_for_symbol
+
+                lot_size = int(self.config.get("strategy.lot_size", 65) or 65)
+                net = net_qty_for_symbol(self.broker, str(symbol))
+                if net is not None and lots_fulfilled(int(net), int(expected_qty), lot_size):
+                    return True
+            status = str(self.broker.get_order_status(order_id) or "").upper()
+            return status in {"TRADED", "COMPLETE", "FILLED"}
+        except Exception:
+            return False
+
+    def _publish_execution_failure(
+
+        self,
+        *,
+        scenario: str,
+        title: str,
+        error_message: str,
+        next_action: str,
+    ) -> None:
+        self.events.publish(
+            Event.MODULE_ERROR,
+            {
+                "module": self.name,
+                "scenario": scenario,
+                "severity": "critical",
+                "category": "order",
+                "title": title,
+                "error_message": error_message,
+                "next_action": next_action,
+            },
+        )
+
+    def _write_handoff_row(
+        self,
+        plan: SidePlan,
+        deployment: dict[str, Any],
+        dte: int,
+        spot: float,
+        order_id: str,
+        request_id: str,
+    ) -> None:
+        _HANDOFF_PATH.parent.mkdir(parents=True, exist_ok=True)
+        fieldnames = [
+            "trade_date",
+            "request_id",
+            "deployment_file",
+            "side",
+            "zone",
+            "action",
+            "symbol",
+            "strike",
+            "qty",
+            "order_id",
+            "spot",
+            "dte",
+            "break_even",
+            "status",
+        ]
+        rows: list[dict[str, Any]] = []
+        if _HANDOFF_PATH.exists():
+            with open(_HANDOFF_PATH, newline="", encoding="utf-8") as fh:
+                rows = list(csv.DictReader(fh))
+
+        key = (utils.today_ist().isoformat(), plan.side)
+        new_row = {
+            "trade_date": key[0],
+            "request_id": request_id,
+            "deployment_file": Path(str(self.state.get("deployment.file", ""))).name,
+            "side": plan.side,
+            "zone": plan.state,
+            "action": plan.action,
+            "symbol": plan.symbol,
+            "strike": plan.strike,
+            "qty": plan.quantity,
+            "order_id": order_id,
+            "spot": f"{spot:.2f}",
+            "dte": dte,
+            "break_even": plan.break_even,
+            "status": "verified_buy",
+        }
+
+        replaced = False
+        for index, row in enumerate(rows):
+            if (row.get("trade_date"), row.get("side")) == key:
+                rows[index] = new_row
+                replaced = True
+                break
+        if not replaced:
+            rows.append(new_row)
+
+        with open(_HANDOFF_PATH, "w", newline="", encoding="utf-8") as fh:
+            writer = csv.DictWriter(fh, fieldnames=fieldnames)
+            writer.writeheader()
+            writer.writerows(rows)
+
+        self.state.set("aditya.handoff_file", str(_HANDOFF_PATH), save=False)
+
+    def _update_overnight_summary(self, **fields: Any) -> None:
+        from core.overnight_handoff import merge_overnight_summary
+
+        merge_overnight_summary(self.state, **fields)
+
+    def _execute_pending(self, request_id: str, today: date) -> None:
+        """CE once, then PE once. Each side confirms via position book (ATO logic). Never retry."""
+        sides = list(self.state.get("ratripal.pending.sides") or [])
+
+        def _side_rank(row: dict[str, Any]) -> int:
+            s = str(row.get("side") or "").upper()
+            if s == "CE":
+                return 0
+            if s == "PE":
+                return 1
+            return 2
+
+        sides = sorted(sides, key=_side_rank)
+        deployment = self._load_deployment() or {}
+        dte = self._calculate_dte(deployment, today) if deployment else 0
+        try:
+            spot = float(self.broker.get_nifty_ltp())
+        except Exception:
+            spot = 0.0
+
+        results: list[tuple[str, bool]] = []
+        for row in sides:
+            plan = SidePlan(
+                side=str(row.get("side") or ""),
+                state=str(row.get("zone") or ""),
+                action=str(row.get("action") or "standard_break_even"),
+                strike=row.get("strike"),
+                symbol=row.get("symbol"),
+                quantity=int(row.get("qty") or 0),
+                break_even=row.get("break_even"),
+                option_ltp=row.get("option_ltp"),
+            )
+            self.log.info(
+                "Overnight sequence punch side=%s qty=%s symbol=%s (once, book-confirm like ATO)",
+                plan.side,
+                plan.quantity,
+                plan.symbol,
+            )
+            ok = self._execute_plan(plan, deployment, dte, spot, request_id)
+            results.append((str(plan.side).upper(), bool(ok)))
+            # Always continue to the other head — do not stop after CE.
+
+        # ALWAYS clear pending — no redraw / no overnight repunch today.
+        self._clear_pending_request(request_id)
+        self.state.set("ratripal.last_run_date", today.isoformat())
+        ok_sides = [s for s, ok in results if ok]
+        fail_sides = [s for s, ok in results if not ok]
+        if not fail_sides:
+            decision, status = "bought", "holding"
+        elif not ok_sides:
+            decision, status = "buy_failed", "buy_failed"
+        else:
+            decision, status = "partial", "partial"
+        self.state.set("ratripal.last_decision", decision)
+        self._update_overnight_summary(
+            status=status,
+            denied=False,
+            date=today.isoformat(),
+            ce_symbol=self.state.get("overnight.ce_symbol"),
+            ce_qty=int(self.state.get("overnight.ce_qty") or 0),
+            pe_symbol=self.state.get("overnight.pe_symbol"),
+            pe_qty=int(self.state.get("overnight.pe_qty") or 0),
+        )
+        self.log.info(
+            "Overnight sequence done decision=%s ok=%s fail=%s (no retry)",
+            decision,
+            ok_sides,
+            fail_sides,
+        )
+
+    def _record_overnight_fill(self, plan: SidePlan, filled: int) -> None:
+        """Remember evening overnight fill only — not the full book / 35% pile."""
+        tag = "ce" if str(plan.side).upper() == "CE" else "pe"
+        today = utils.now_ist().date().isoformat()
+        self.state.set(f"overnight.{tag}_symbol", str(plan.symbol), save=False)
+        self.state.set(f"overnight.{tag}_strike", int(plan.strike or 0), save=False)
+        self.state.set(f"overnight.{tag}_qty", int(filled), save=False)
+        self.state.set("overnight.hedge_active", True, save=False)
+        self.state.set("overnight.buy_date", today, save=False)
+        self.state.set("overnight.morning_done_date", None)
+        self._update_overnight_summary(
+            status="holding",
+            denied=False,
+            **{
+                f"{tag}_symbol": str(plan.symbol),
+                f"{tag}_qty": int(filled),
+                f"{tag}_strike": int(plan.strike or 0),
+            },
+        )
+        try:
+            from core.overnight_handoff import record_overnight_cycle_entry
+
+            px = None
+            try:
+                px = float(plan.option_ltp) if plan.option_ltp is not None else None
+            except (TypeError, ValueError):
+                px = None
+            record_overnight_cycle_entry(
+                self.state,
+                side=str(plan.side),
+                symbol=str(plan.symbol),
+                qty=int(filled),
+                entry_premium=px,
+                entry_time=utils.now_ist().strftime("%Y-%m-%d %H:%M:%S"),
+                zone=str(plan.state or ""),
+                date_ist=utils.now_ist().date().isoformat(),
+            )
+        except Exception:
+            pass
+        self.log.info(
+            "Kavach overnight hedge recorded side=%s symbol=%s filled=%s (evening qty only)",
+            plan.side,
+            plan.symbol,
+            filled,
+        )
+
+    def _is_buy_candidate(self, plan: SidePlan) -> bool:
+        # Always add Hedge Box qty. Existing 35% / extra lots on the same strike
+        # must not block the evening overnight buy.
+        return plan.action in _BUY_ACTIONS and bool(plan.symbol)
+
+    def _has_existing_long_position(self, symbol: str, qty: int) -> bool:
+        try:
+            positions = self.broker.get_positions()
+        except Exception:
+            return False
+        if positions is None or positions.empty:
+            return False
+        for _, row in positions.iterrows():
+            row_symbol = str(row.get("tradingSymbol") or row.get("tradingsymbol") or "")
+            if row_symbol != symbol:
+                continue
+            net_qty = int(row.get("netQty", 0) or row.get("buyQty", 0) - row.get("sellQty", 0))
+            if net_qty >= qty:
+                return True
+        return False
+
+    def _clear_pending_request(self, request_id: str) -> None:
+        if self.state.get("ratripal.pending.request_id") != request_id:
+            return
+        self.state.set("ratripal.pending.request_id", None, save=False)
+        self.state.set("ratripal.pending.response", None, save=False)
+        self.state.set("ratripal.pending.sent_at", None, save=False)
+        self.state.set("ratripal.pending.sides", None, save=False)
+        self.state.set("ratripal.pending.buy_time_ist", None, save=False)
+
+    def _get_option_ltp(self, symbol: str | None) -> float | None:
+        if not symbol:
+            return None
+        try:
+            prices = self.broker.get_ltp([symbol])
+            value = prices.get(symbol)
+            return None if value is None else float(value)
+        except Exception:
+            return None
+
+    @staticmethod
+    def _inside_steps(state: str) -> int | None:
+        mapping = {
+            "Green": 1,
+            "Orange": 2,
+            "Blue": 3,
+            "Yellow": 4,
+        }
+        return mapping.get(state)
+
+    @staticmethod
+    def _color_order_for_dte(dte: int) -> list[str]:
+        if dte >= 4:
+            return ["Green"]
+        if dte == 3:
+            return ["Orange", "Green"]
+        if dte == 2:
+            return ["Blue", "Orange", "Green"]
+        if dte == 1:
+            return ["Yellow", "Blue", "Orange", "Green"]
+        return []
+
+    @staticmethod
+    def _round_to_strike(value: float, step: int) -> int:
+        if step != 50:
+            lower = int(value // step) * step
+            upper = lower + step
+            return lower if value - lower < upper - value else upper
+        base_100 = int(value // 100) * 100
+        offset = value - base_100
+        if offset < 25:
+            return base_100
+        if offset < 75:
+            return base_100 + 50
+        return base_100 + 100
+
+    @staticmethod
+    def _build_option_symbol(sell_symbol: str, strike: int, side: str) -> str | None:
+        """Build hedge symbol on the same expiry as the sell leg.
+
+        Supports classic ``NIFTY26SEP23500CE`` and weekly ``NIFTY2692223500CE``.
+        """
+        sym = str(sell_symbol or "").strip()
+        if not sym or not strike:
+            return None
+        side_u = str(side or "").upper()
+        if side_u not in {"CE", "PE"}:
+            return None
+        try:
+            from core.positions import build_ato_protect_symbol
+
+            out = build_ato_protect_symbol(sym, int(strike), side_u)
+            if out and out.startswith("NIFTY"):
+                return out
+        except Exception:
+            pass
+        # Fallbacks (same as build_ato_protect_symbol)
+        compact = re.match(r"^([A-Z]+\d{2}[A-Z]{3})(\d+)(CE|PE)$", sym)
+        if compact:
+            return f"{compact.group(1)}{int(strike)}{side_u}"
+        weekly = re.match(r"^(NIFTY\d{5})(\d{4,5})(CE|PE)$", sym)
+        if weekly:
+            return f"{weekly.group(1)}{int(strike)}{side_u}"
+        return None

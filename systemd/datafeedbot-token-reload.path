@@ -1,0 +1,12 @@
+[Unit]
+Description=Watch Kavach/Feeder token JSON and reload Datafeedbot
+
+[Path]
+PathModified=/home/ubuntu/Datafeedbot_Runtime/Data/shared/zerodha_access_token.json
+PathChanged=/home/ubuntu/Datafeedbot_Runtime/Data/shared/zerodha_access_token.json
+PathModified=/home/ubuntu/Datafeedbot_Runtime/Data/shared/access_token.json
+PathChanged=/home/ubuntu/Datafeedbot_Runtime/Data/shared/access_token.json
+Unit=datafeedbot-token-reload.service
+
+[Install]
+WantedBy=multi-user.target

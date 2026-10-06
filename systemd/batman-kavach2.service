@@ -1,0 +1,26 @@
+[Unit]
+Description=Batman Phase-1 KAVACH2 (ATO protection) [rahul_Changes]
+After=network-online.target datafeedbot.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=ubuntu
+Group=ubuntu
+WorkingDirectory=/home/ubuntu/rahul_Changes
+Environment=BATMAN_LAUNCHED_VIA_BAT=1
+Environment=PYTHONUNBUFFERED=1
+ExecStartPre=/bin/sleep 5
+ExecStart=/home/ubuntu/rahul_Changes/.venv/bin/python /home/ubuntu/rahul_Changes/run_kavach2.py
+Restart=always
+RestartSec=5
+TimeoutStopSec=60
+KillMode=mixed
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=batman-kavach2
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,220 @@
+{
+  "schema_version": "shadow_p0_v2_8leg",
+  "fixture": "/home/ubuntu/Trading_Runtime/Data/data/uat/deployed_positions/positions.json",
+  "expiry_date": "2026-08-04",
+  "spot_at_capture": 24325.0,
+  "lot_size": 65,
+  "jwt_validated": true,
+  "leg_count": 8,
+  "positions_roles_sells": {
+    "pe_sell": {
+      "symbol": "NIFTY-Aug2026-24300-PE",
+      "strike": 24300,
+      "expiry": "Aug2026",
+      "qty": 910,
+      "avg_price": 72.95,
+      "instrument_token": "65809",
+      "side": "SELL"
+    },
+    "ce_sell": {
+      "symbol": "NIFTY-Aug2026-24400-CE",
+      "strike": 24400,
+      "expiry": "Aug2026",
+      "qty": 910,
+      "avg_price": 70.1,
+      "instrument_token": "65854",
+      "side": "SELL"
+    }
+  },
+  "resolved_instruments": [
+    {
+      "strike": 24300,
+      "option_type": "PE",
+      "expiry_date": "2026-08-04",
+      "trading_symbol": "NIFTY-Aug2026-24300-PE",
+      "security_id": "65809",
+      "lot_size": 65,
+      "source": "instrument_master"
+    },
+    {
+      "strike": 24350,
+      "option_type": "PE",
+      "expiry_date": "2026-08-04",
+      "trading_symbol": "NIFTY-Aug2026-24350-PE",
+      "security_id": "65853",
+      "lot_size": 65,
+      "source": "instrument_master"
+    },
+    {
+      "strike": 24100,
+      "option_type": "PE",
+      "expiry_date": "2026-08-04",
+      "trading_symbol": "NIFTY-Aug2026-24100-PE",
+      "security_id": "65698",
+      "lot_size": 65,
+      "source": "instrument_master"
+    },
+    {
+      "strike": 23500,
+      "option_type": "PE",
+      "expiry_date": "2026-08-04",
+      "trading_symbol": "NIFTY-Aug2026-23500-PE",
+      "security_id": "65673",
+      "lot_size": 65,
+      "source": "instrument_master"
+    },
+    {
+      "strike": 24350,
+      "option_type": "CE",
+      "expiry_date": "2026-08-04",
+      "trading_symbol": "NIFTY-Aug2026-24350-CE",
+      "security_id": "65852",
+      "lot_size": 65,
+      "source": "instrument_master"
+    },
+    {
+      "strike": 24600,
+      "option_type": "CE",
+      "expiry_date": "2026-08-04",
+      "trading_symbol": "NIFTY-Aug2026-24600-CE",
+      "security_id": "65871",
+      "lot_size": 65,
+      "source": "instrument_master"
+    },
+    {
+      "strike": 25000,
+      "option_type": "CE",
+      "expiry_date": "2026-08-04",
+      "trading_symbol": "NIFTY-Aug2026-25000-CE",
+      "security_id": "65916",
+      "lot_size": 65,
+      "source": "instrument_master"
+    },
+    {
+      "strike": 24400,
+      "option_type": "CE",
+      "expiry_date": "2026-08-04",
+      "trading_symbol": "NIFTY-Aug2026-24400-CE",
+      "security_id": "65854",
+      "lot_size": 65,
+      "source": "instrument_master"
+    }
+  ],
+  "ato": {
+    "ato_step": 50,
+    "pe_protect_symbol": "NIFTY-Aug2026-24250-PE",
+    "pe_protect_strike": 24250,
+    "pe_protect_security_id": "65807",
+    "ce_protect_symbol": "NIFTY-Aug2026-24450-CE",
+    "ce_protect_strike": 24450,
+    "ce_protect_security_id": "65858",
+    "pe_trigger_spot": 24300,
+    "ce_trigger_spot": 24400
+  },
+  "ratio_checks": {
+    "skipped": true,
+    "reason": "Core BUY selected in Register from multiple candidates"
+  },
+  "option_chain_cross_check": {
+    "skipped": true
+  },
+  "broker_positions_preview": [
+    {
+      "tradingSymbol": "NIFTY-Aug2026-24300-PE",
+      "netQty": -910,
+      "avgPrice": 72.95,
+      "costPrice": 72.95,
+      "drvStrikePrice": 24300.0,
+      "drvExpiryDate": "2026-08-04",
+      "drvOptionType": "PE",
+      "securityId": "65809",
+      "exchangeSegment": "NSE_FNO",
+      "productType": "MARGIN"
+    },
+    {
+      "tradingSymbol": "NIFTY-Aug2026-24350-PE",
+      "netQty": 455,
+      "avgPrice": 93.35,
+      "costPrice": 93.35,
+      "drvStrikePrice": 24350.0,
+      "drvExpiryDate": "2026-08-04",
+      "drvOptionType": "PE",
+      "securityId": "65853",
+      "exchangeSegment": "NSE_FNO",
+      "productType": "MARGIN"
+    },
+    {
+      "tradingSymbol": "NIFTY-Aug2026-24100-PE",
+      "netQty": 130,
+      "avgPrice": 25.25,
+      "costPrice": 25.25,
+      "drvStrikePrice": 24100.0,
+      "drvExpiryDate": "2026-08-04",
+      "drvOptionType": "PE",
+      "securityId": "65698",
+      "exchangeSegment": "NSE_FNO",
+      "productType": "MARGIN"
+    },
+    {
+      "tradingSymbol": "NIFTY-Aug2026-23500-PE",
+      "netQty": 455,
+      "avgPrice": 3.5,
+      "costPrice": 3.5,
+      "drvStrikePrice": 23500.0,
+      "drvExpiryDate": "2026-08-04",
+      "drvOptionType": "PE",
+      "securityId": "65673",
+      "exchangeSegment": "NSE_FNO",
+      "productType": "MARGIN"
+    },
+    {
+      "tradingSymbol": "NIFTY-Aug2026-24350-CE",
+      "netQty": 455,
+      "avgPrice": 94.85,
+      "costPrice": 94.85,
+      "drvStrikePrice": 24350.0,
+      "drvExpiryDate": "2026-08-04",
+      "drvOptionType": "CE",
+      "securityId": "65852",
+      "exchangeSegment": "NSE_FNO",
+      "productType": "MARGIN"
+    },
+    {
+      "tradingSymbol": "NIFTY-Aug2026-24600-CE",
+      "netQty": 130,
+      "avgPrice": 14.4,
+      "costPrice": 14.4,
+      "drvStrikePrice": 24600.0,
+      "drvExpiryDate": "2026-08-04",
+      "drvOptionType": "CE",
+      "securityId": "65871",
+      "exchangeSegment": "NSE_FNO",
+      "productType": "MARGIN"
+    },
+    {
+      "tradingSymbol": "NIFTY-Aug2026-25000-CE",
+      "netQty": 455,
+      "avgPrice": 1.65,
+      "costPrice": 1.65,
+      "drvStrikePrice": 25000.0,
+      "drvExpiryDate": "2026-08-04",
+      "drvOptionType": "CE",
+      "securityId": "65916",
+      "exchangeSegment": "NSE_FNO",
+      "productType": "MARGIN"
+    },
+    {
+      "tradingSymbol": "NIFTY-Aug2026-24400-CE",
+      "netQty": -910,
+      "avgPrice": 70.1,
+      "costPrice": 70.1,
+      "drvStrikePrice": 24400.0,
+      "drvExpiryDate": "2026-08-04",
+      "drvOptionType": "CE",
+      "securityId": "65854",
+      "exchangeSegment": "NSE_FNO",
+      "productType": "MARGIN"
+    }
+  ],
+  "production_filter_count": 8
+}

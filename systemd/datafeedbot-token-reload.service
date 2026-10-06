@@ -1,0 +1,8 @@
+[Unit]
+Description=Reload Datafeedbot after Kavach token file change
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=root
+ExecStart=/home/ubuntu/Datafeedbot/scripts/reload_datafeedbot_on_token.sh

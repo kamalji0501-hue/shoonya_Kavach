@@ -1,0 +1,4 @@
+status: READY_AWAITING_VPS
+systemd_units: batman-drishti batman-kavach2 batman-jagran batman-saransh batman-phase1 vps-monitor-batman
+deploy_script: vps/deploy_to_vps.sh
+blocked_on: VPS_HOST + SSH key in vps/deploy.env (create via vps/provision_lightsail.sh or AWS console)

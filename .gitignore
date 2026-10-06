@@ -1,0 +1,30 @@
+# Secrets & sessions
+**/.env
+!**/.env.example
+**/token.env
+**/bots.env
+**/*session*.json
+**/access_token.json
+**/API_KEY.txt
+**/token.txt
+**/copy_key.txt
+**/Credentials/**
+!**/Credentials/**/.gitkeep
+!**/Credentials/**/*.example
+**/*.pem
+**/*.key
+**/secrets/
+
+# Heavy / regenerable
+**/.venv/
+**/venv/
+**/__pycache__/
+**/*.pyc
+**/.git/
+**/Logs/
+**/logs/
+**/*.log
+**/backtest_engine/cache/
+**/ssd_backtest/cache/
+**/.cache/
+**/node_modules/

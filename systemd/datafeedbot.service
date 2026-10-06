@@ -1,0 +1,25 @@
+[Unit]
+Description=Datafeedbot (Dhan+Zerodha unified market data)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=ubuntu
+Group=ubuntu
+WorkingDirectory=/home/ubuntu/Datafeedbot
+Environment=PYTHONUNBUFFERED=1
+Environment=DATAFEEDBOT_RUNTIME=/home/ubuntu/Datafeedbot_Runtime
+ExecStart=/home/ubuntu/Datafeedbot/.venv/bin/python /home/ubuntu/Datafeedbot/run_datafeedbot.py
+Restart=always
+RestartSec=5
+TimeoutStopSec=30
+KillMode=mixed
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=datafeedbot
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

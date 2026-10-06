@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta http-equiv="Cache-Control" content="no-store" />
+  <title>KAVACH</title>
+  <meta name="theme-color" content="#7C6AE8" />
+  <script>
+    (function () {
+      try {
+        var t = localStorage.getItem("kavach-theme");
+        if (t !== "dark" && t !== "light") t = "light";
+        document.documentElement.setAttribute("data-theme", t);
+        var m = document.querySelector('meta[name="theme-color"]');
+        if (m) m.setAttribute("content", t === "dark" ? "#0F172A" : "#7C6AE8");
+      } catch (e) {
+        document.documentElement.setAttribute("data-theme", "light");
+      }
+    })();
+  </script>
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="KAVACH" />
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <link rel="icon" href="/static/icons/icon-192.png" type="image/png" />
+  <link rel="apple-touch-icon" href="/static/icons/apple-touch-icon.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=Outfit:wght@400;500;600;700&family=Poppins:wght@500;600;700&family=Syne:wght@600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/static/app.css?cb=20261006shoonyaNoCopy1" />
+</head>
+<body>
+    <div id="login" class="login">
+    <div class="orb orb-a" aria-hidden="true"></div>
+    <div class="orb orb-b" aria-hidden="true"></div>
+
+    <div class="login-card">
+      <img class="logo-hero drop-in" src="/static/logo.png" alt="KDFINSCHOOL" />
+      <div class="login-word">
+        <h2><span>KAVACH</span></h2>
+        <small>KDFINSCHOOL</small>
+      </div>
+      <label>PASSWORD</label>
+      <input id="pw" type="password" autocomplete="current-password" />
+      <button class="btn gold" id="loginBtn" type="button">ENTER</button>
+      <button class="btn gold hidden" id="installBtn" type="button">INSTALL AS APP</button>
+      <p class="sub" id="loginErr"></p>
+      <p class="sub install-hint" id="installHint"></p>
+      <label class="theme-switch theme-switch-login" role="switch" aria-label="Switch to dark theme" aria-checked="false" title="Light / dark">
+        <input type="checkbox" id="loginThemeToggle" />
+        <div class="slider round">
+          <div class="sun-moon">
+            <svg class="moon-dot moon-dot-1" viewBox="0 0 100 100"><circle cx="50" cy="50" r="50"></circle></svg>
+            <svg class="moon-dot moon-dot-2" viewBox="0 0 100 100"><circle cx="50" cy="50" r="50"></circle></svg>
+            <svg class="moon-dot moon-dot-3" viewBox="0 0 100 100"><circle cx="50" cy="50" r="50"></circle></svg>
+            <svg class="light-ray light-ray-1" viewBox="0 0 100 100"><circle cx="50" cy="50" r="50"></circle></svg>
+            <svg class="light-ray light-ray-2" viewBox="0 0 100 100"><circle cx="50" cy="50" r="50"></circle></svg>
+            <svg class="light-ray light-ray-3" viewBox="0 0 100 100"><circle cx="50" cy="50" r="50"></circle></svg>
+          </div>
+          <svg class="cloud-dark cloud-1" viewBox="0 0 100 100"><circle cx="50" cy="50" r="50"></circle></svg>
+          <svg class="cloud-dark cloud-2" viewBox="0 0 100 100"><circle cx="50" cy="50" r="50"></circle></svg>
+          <svg class="cloud-dark cloud-3" viewBox="0 0 100 100"><circle cx="50" cy="50" r="50"></circle></svg>
+          <svg class="cloud-light cloud-4" viewBox="0 0 100 100"><circle cx="50" cy="50" r="50"></circle></svg>
+          <svg class="cloud-light cloud-5" viewBox="0 0 100 100"><circle cx="50" cy="50" r="50"></circle></svg>
+          <svg class="cloud-light cloud-6" viewBox="0 0 100 100"><circle cx="50" cy="50" r="50"></circle></svg>
+          <div class="stars">
+            <svg class="star star-1" viewBox="0 0 20 20"><path d="M 0 10 C 10 10,10 10 ,0 10 C 10 10 , 10 10 , 10 20 C 10 10 , 10 10 , 20 10 C 10 10 , 10 10 , 10 0 C 10 10,10 10 ,0 10 Z"></path></svg>
+            <svg class="star star-2" viewBox="0 0 20 20"><path d="M 0 10 C 10 10,10 10 ,0 10 C 10 10 , 10 10 , 10 20 C 10 10 , 10 10 , 20 10 C 10 10 , 10 10 , 10 0 C 10 10,10 10 ,0 10 Z"></path></svg>
+            <svg class="star star-3" viewBox="0 0 20 20"><path d="M 0 10 C 10 10,10 10 ,0 10 C 10 10 , 10 10 , 10 20 C 10 10 , 10 10 , 20 10 C 10 10 , 10 10 , 10 0 C 10 10,10 10 ,0 10 Z"></path></svg>
+            <svg class="star star-4" viewBox="0 0 20 20"><path d="M 0 10 C 10 10,10 10 ,0 10 C 10 10 , 10 10 , 10 20 C 10 10 , 10 10 , 20 10 C 10 10 , 10 10 , 10 0 C 10 10,10 10 ,0 10 Z"></path></svg>
+          </div>
+        </div>
+      </label>
+    </div>
+  </div>
+
+  <!-- Post-login strategy chooser (Aman): ui-layouts Cobe Earth + strategy cards -->
+  <div id="strategyPick" class="strat-pick hidden" aria-hidden="true" data-globe-theme="dark">
+    <div class="strat-pick-dots" aria-hidden="true"></div>
+    <div class="strat-pick-globe-wrap" aria-hidden="true">
+      <canvas id="stratPickGlobe" class="strat-pick-globe" width="800" height="800"></canvas>
+    </div>
+    <div class="strat-pick-glass" aria-hidden="true"></div>
+    <div class="strat-pick-inner">
+      <h1 class="strat-pick-title">Select a strategy</h1>
+      <div class="strat-pick-row" role="list">
+        <!-- uiverse.io/prashantj510/breezy-otter-62 — scoped as strat-glow-* -->
+        <button type="button" class="strat-glow-card" data-strategy="batman" role="listitem" aria-label="Deploy Batman strategy">
+          <div class="strat-glow-inner">
+            <span class="strat-glow-title">BATMAN</span>
+            <span class="strat-glow-lots" id="pickLotsBatman">—</span>
+          </div>
+        </button>
+
+        <button type="button" class="strat-glow-card" data-strategy="directional" role="listitem" aria-label="Deploy directional trading strategy">
+          <div class="strat-glow-inner">
+            <span class="strat-glow-title">DIRECTIONAL</span>
+            <span class="strat-glow-lots" id="pickLotsDirectional">—</span>
+          </div>
+        </button>
+      </div>
+    </div>
+  </div>
+
+<div id="lockScene" class="lock-scene" aria-hidden="true">
+    <div class="lock-vignette"></div>
+    <div class="lock-stage">
+      <svg class="svg-lock" viewBox="0 0 160 210" aria-hidden="true">
+        <defs>
+          <linearGradient id="lockBody" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#C9BDF7"/>
+            <stop offset="100%" stop-color="#8B7CF6"/>
+          </linearGradient>
+          <linearGradient id="lockShine" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.45"/>
+            <stop offset="100%" stop-color="#7C6AE8" stop-opacity="0"/>
+          </linearGradient>
+        </defs>
+        <path class="shackle" d="M48 92 V58 A32 32 0 0 1 112 58 V92" fill="none" stroke="#5B4FC7" stroke-width="14" stroke-linecap="round"/>
+        <rect class="lock-body" x="28" y="88" width="104" height="108" rx="16" fill="url(#lockBody)"/>
+        <rect x="28" y="88" width="104" height="108" rx="16" fill="url(#lockShine)"/>
+        <circle cx="80" cy="138" r="12" fill="#FBFAFE"/>
+        <rect x="74" y="138" width="12" height="28" rx="4" fill="#FBFAFE"/>
+      </svg>
+      <div class="key-wrap">
+        <svg class="svg-key" viewBox="0 0 220 72" aria-hidden="true">
+          <circle cx="32" cy="36" r="22" fill="none" stroke="#D45B7A" stroke-width="8"/>
+          <circle cx="32" cy="36" r="8" fill="#FBFAFE"/>
+          <rect x="52" y="30" width="128" height="12" rx="6" fill="#D45B7A"/>
+          <rect x="156" y="42" width="10" height="18" rx="2" fill="#D45B7A"/>
+          <rect x="172" y="42" width="10" height="14" rx="2" fill="#D45B7A"/>
+          <rect x="188" y="42" width="10" height="22" rx="2" fill="#D45B7A"/>
+        </svg>
+      </div>
+    </div>
+    <p class="lock-msg">ACCESS RESTRICTED</p>
+  </div>
+
+  <div id="desk" class="desk hidden">
+    <div class="nav-scrim" id="navScrim"></div>
+    <aside class="side" id="sideNav">
+      <div class="brand">
+        <img class="logo-side" src="/static/logo.png" alt="KDFINSCHOOL" />
+        <div class="brand-copy">
+          <h2><span>KAVACH</span></h2>
+          <small>KDFINSCHOOL</small>
+          <div class="broker-acct" id="brokerAcct" hidden>
+            <button type="button" class="broker-acct-profile" id="brokerAcctProfile" title="User Detail" aria-label="Open user detail" aria-controls="userDetailOverlay" aria-expanded="false">
+              <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false">
+                <circle cx="12" cy="8" r="3.6" fill="currentColor"></circle>
+                <path d="M4.8 19.2c.6-3.4 3.5-5.4 7.2-5.4s6.6 2 7.2 5.4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path>
+              </svg>
+            </button>
+            <span class="broker-acct-status" id="brokerAcctStatus" title="" aria-label=""></span>
+            <span class="broker-acct-broker" id="brokerAcctBroker"></span>
+            <span class="broker-acct-name" id="brokerAcctName"></span>
+            <span class="broker-acct-sep" id="brokerAcctSep1" aria-hidden="true">|</span>
+            <span class="broker-acct-sep" id="brokerAcctSep2" aria-hidden="true">|</span>
+            <span class="broker-acct-id" id="brokerAcctId"></span>
+          </div>
+        </div>
+      </div>
+      <button class="nav on" data-go="home" type="button">HOME</button>
+      <button class="nav nav-mobile-only" data-go="positions" type="button">POSITIONS</button>
+      <button class="nav" data-go="deploy" type="button">DEPLOY BATMAN 2.0</button>
+            <button class="nav" data-go="ato" type="button">ATO MANAGER</button>
+      <button class="nav" data-go="summary" type="button">ATO SUMMARY</button>
+      <button class="nav" data-go="overnight" type="button">OVERNIGHT HEDGE</button>
+      <button class="nav" data-go="register" type="button">REGISTER BATMAN</button>
+      <button class="nav" data-go="payoff" type="button">PAYOFF</button>
+      <button class="nav" data-go="token" type="button">TOKEN</button>
+      <button class="nav" data-go="alerts" type="button">ALERT LOGS</button>
+      <button class="nav" id="logoutBtn" type="button">STAND DOWN</button>
+    </aside>
+    <div class="main">
+      <div class="top">
+        <button type="button" class="menu-btn" id="menuBtn" aria-label="Open menu" aria-expanded="false" aria-controls="sideNav">
+          <img class="logo-top" src="/static/logo.png" alt="KAVACH" />
+        </button>
+        <div class="top-brand">
+          <img class="logo-top" src="/static/logo.png" alt="" />
+          <div class="top-go"><span>KAVACH</span></div>
+        </div>
+        <div class="top-choppy">
+          <label class="toggle rg" title="Pause or resume the algo">
+            <input id="runToggle" type="checkbox" />
+            <span class="knob"></span>
+            <span class="tog-copy"><span class="tog-name">ALGO</span><span id="runLbl">KAVACH PAUSED</span></span>
+          </label>
+          <label class="toggle rg" title="35% dynamic hedge">
+            <input id="hedgeToggle" type="checkbox" />
+            <span class="knob"></span>
+            <span class="tog-copy"><span class="tog-name">35% DH</span><span id="hedgeLbl">35% DH OFF</span></span>
+          </label>
+          <div class="top-exit-box toggle rg exit-sl" title="Stop loss floor — day PnL ≤ level">
+            <input id="safeExitLevel" class="top-exit-inp" type="number" step="1" placeholder="₹" aria-label="Stop loss level" />
+            <label class="exit-switch">
+              <input id="safeExitOn" type="checkbox" />
+              <span class="knob"></span>
+            </label>
+            <span class="tog-copy"><span class="tog-name">SL</span><span id="safeExitLbl">SL OFF</span></span>
+          </div>
+          <div class="top-exit-box toggle rg exit-tp" title="Target ceiling — day PnL ≥ level">
+            <input id="tpExitLevel" class="top-exit-inp" type="number" step="1" placeholder="₹" aria-label="Target level" />
+            <label class="exit-switch">
+              <input id="tpExitOn" type="checkbox" />
+              <span class="knob"></span>
+            </label>
+            <span class="tog-copy"><span class="tog-name">TGT</span><span id="tpExitLbl">TGT OFF</span></span>
+          </div>
+        </div>
+        <div class="grow"></div>
+        <div class="theme-slot" title="Appearance">
+          <label class="theme-switch" role="switch" aria-label="Switch to dark theme" aria-checked="false" title="Light / dark">
+        <input type="checkbox" id="themeToggle" />
+        <div class="slider round">
+          <div class="sun-moon">
+            <svg class="moon-dot moon-dot-1" viewBox="0 0 100 100"><circle cx="50" cy="50" r="50"></circle></svg>
+            <svg class="moon-dot moon-dot-2" viewBox="0 0 100 100"><circle cx="50" cy="50" r="50"></circle></svg>
+            <svg class="moon-dot moon-dot-3" viewBox="0 0 100 100"><circle cx="50" cy="50" r="50"></circle></svg>
+            <svg class="light-ray light-ray-1" viewBox="0 0 100 100"><circle cx="50" cy="50" r="50"></circle></svg>
+            <svg class="light-ray light-ray-2" viewBox="0 0 100 100"><circle cx="50" cy="50" r="50"></circle></svg>
+            <svg class="light-ray light-ray-3" viewBox="0 0 100 100"><circle cx="50" cy="50" r="50"></circle></svg>
+          </div>
+          <svg class="cloud-dark cloud-1" viewBox="0 0 100 100"><circle cx="50" cy="50" r="50"></circle></svg>
+          <svg class="cloud-dark cloud-2" viewBox="0 0 100 100"><circle cx="50" cy="50" r="50"></circle></svg>
+          <svg class="cloud-dark cloud-3" viewBox="0 0 100 100"><circle cx="50" cy="50" r="50"></circle></svg>
+          <svg class="cloud-light cloud-4" viewBox="0 0 100 100"><circle cx="50" cy="50" r="50"></circle></svg>
+          <svg class="cloud-light cloud-5" viewBox="0 0 100 100"><circle cx="50" cy="50" r="50"></circle></svg>
+          <svg class="cloud-light cloud-6" viewBox="0 0 100 100"><circle cx="50" cy="50" r="50"></circle></svg>
+          <div class="stars">
+            <svg class="star star-1" viewBox="0 0 20 20"><path d="M 0 10 C 10 10,10 10 ,0 10 C 10 10 , 10 10 , 10 20 C 10 10 , 10 10 , 20 10 C 10 10 , 10 10 , 10 0 C 10 10,10 10 ,0 10 Z"></path></svg>
+            <svg class="star star-2" viewBox="0 0 20 20"><path d="M 0 10 C 10 10,10 10 ,0 10 C 10 10 , 10 10 , 10 20 C 10 10 , 10 10 , 20 10 C 10 10 , 10 10 , 10 0 C 10 10,10 10 ,0 10 Z"></path></svg>
+            <svg class="star star-3" viewBox="0 0 20 20"><path d="M 0 10 C 10 10,10 10 ,0 10 C 10 10 , 10 10 , 10 20 C 10 10 , 10 10 , 20 10 C 10 10 , 10 10 , 10 0 C 10 10,10 10 ,0 10 Z"></path></svg>
+            <svg class="star star-4" viewBox="0 0 20 20"><path d="M 0 10 C 10 10,10 10 ,0 10 C 10 10 , 10 10 , 10 20 C 10 10 , 10 10 , 10 0 C 10 10,10 10 ,0 10 Z"></path></svg>
+          </div>
+        </div>
+      </label>
+        </div>
+        <div class="top-spot">
+          <div class="chip chip-spot chip-spot-stack" id="spotStack">
+            <span id="niftyTop">NIFTY —</span>
+            <span id="clock">—</span>
+          </div>
+        </div>
+      </div>
+      <div class="top-alert-row" id="topAlertRow">
+        <div id="atoBanner" class="ato-banner hidden" role="alert"></div>
+        <div class="toast" id="toast" role="status" aria-live="assertive">
+          <div class="notice-cat" id="noticeCat"></div>
+          <div class="notice-line" id="noticeLine"></div>
+        </div>
+      </div>
+      <div class="body" id="view"></div>
+      <div id="goNotice" class="go-notice hidden"></div>
+    </div>
+  </div>
+  
+  <nav class="tabbar" id="tabs">
+    <span data-go="home" class="on">HOME</span>
+    <span data-go="ato">ATO</span>
+    <span data-go="summary">SUMMARY</span>
+    <span data-go="overnight">NIGHT</span>
+    <span data-go="register">REGISTER</span>
+    <span data-menu="1">MENU</span>
+  </nav>
+  <div id="busyGate" class="busy-gate hidden" aria-hidden="true">
+    <div class="spinner" role="status" aria-label="Loading"></div>
+  </div>
+
+  <!-- User Detail glass modal (outside sidebar so it is not clipped) -->
+  <div class="user-detail-overlay hidden" id="userDetailOverlay" aria-hidden="true">
+    <div class="user-detail-backdrop" id="userDetailBackdrop"></div>
+    <div class="user-detail-card" id="userDetailPanel" role="dialog" aria-modal="true" aria-labelledby="userDetailTitle">
+      <button type="button" class="user-detail-close" id="userDetailClose" aria-label="Close">&times;</button>
+      <h3 class="user-detail-title" id="userDetailTitle">User Detail</h3>
+      <p class="user-detail-sub">Subscription from admin sheet</p>
+      <dl class="user-detail-dl">
+        <div><dt>Name</dt><dd id="udName">-</dd></div>
+        <div><dt>Start date</dt><dd id="udStart">-</dd></div>
+        <div><dt>End date</dt><dd id="udEnd">-</dd></div>
+        <div><dt>Max sell lots (Batman)</dt><dd id="udMaxBatman">-</dd></div>
+        <div><dt>Max sell lots (Directional)</dt><dd id="udMaxDirectional">-</dd></div>
+        <div><dt>Status</dt><dd id="udStatus" class="ud-status">-</dd></div>
+      </dl>
+      <div class="user-detail-actions">
+        <button type="button" class="btn gold user-detail-refresh" id="userDetailRefresh">Refresh My Plan</button>
+        <p class="user-detail-refresh-msg" id="userDetailRefreshMsg" hidden></p>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="/static/strat-globe.js?cb=20261006shoonyaNoCopy1"></script>
+  <script src="/static/app.js?cb=20261006shoonyaNoCopy1"></script>
+</body>
+</html>

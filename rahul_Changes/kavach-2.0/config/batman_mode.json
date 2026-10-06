@@ -1,0 +1,30 @@
+{
+  "_comment": "Single switch: dev | uat | prod. Prefer Mode/*.bat on laptop \u2014 do not edit by hand unless needed. Logs + data/reports live outside repo (see logs_root, data_reports_root).",
+  "mode": "prod",
+  "logs_root": "/home/ubuntu/Trading_Runtime_Rahul/Logs",
+  "data_reports_root": "/home/ubuntu/Trading_Runtime_Rahul/Data",
+  "secrets_root": "/home/ubuntu/Trading_Runtime_Rahul/Credentials",
+  "modes": {
+    "dev": {
+      "label": "Development",
+      "description": "Laptop: live NIFTY read APIs, orders blocked (no static IP).",
+      "broker": "dhan_readonly",
+      "orders": "blocked",
+      "positions_source": "zerodha_live"
+    },
+    "uat": {
+      "label": "UAT (virtual broker)",
+      "description": "Laptop: Sensibull screenshot book, shadow orders, full bot flow.",
+      "broker": "shadow",
+      "orders": "virtual",
+      "positions_source": "uat_screenshot"
+    },
+    "prod": {
+      "label": "Production",
+      "description": "VPS: real Zerodha (Kite REST) positions and orders. Datafeedbot owns KiteTicker.",
+      "broker": "zerodha_live",
+      "orders": "live",
+      "positions_source": "zerodha_live"
+    }
+  }
+}
